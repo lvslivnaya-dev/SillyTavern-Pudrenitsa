@@ -1,0 +1,14 @@
+{
+  "display_name": "Пудреница",
+  "loading_order": 3,
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Слива & Hugh",
+  "version": "0.1.0",
+  "homePage": "https://github.com/lvslivnaya-dev/SillyTavern-Pudrenitsa",
+  "minimum_client_version": "1.19.0",
+  "auto_update": true,
+  "hooks": {
+    "activate": "init"
+  }
+}
