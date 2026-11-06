@@ -24,7 +24,7 @@ const words = text => String(text ?? '').match(/\S+/g)?.length ?? 0;
 
 /**
  * @param {Document} doc
- * @param {{ context: any, settings: any, save: () => void, api?: typeof characterApi, lore?: { ready(): Promise<void>, worldNames(): string[], openLorebook(name: string): any }, shared?: any }} deps
+ * @param {{ context: any, settings: any, save: () => void, api?: typeof characterApi, lore?: typeof personaApi, shared?: any }} deps
  */
 export function startCharacters(doc, { context, settings, save, api = characterApi, lore = personaApi, shared = {} }) {
   const holder = doc.getElementById('top-settings-holder');
@@ -115,6 +115,8 @@ export function startCharacters(doc, { context, settings, save, api = characterA
     const entry = buildCharacters([character], ctx().tagMap, ctx().tags)[0];
     const current = api.isCurrent(character.avatar);
     const lorebooks = lore.worldNames();
+    const extras = lore.extraBooks?.(character.avatar) ?? [];
+    const chatBook = current ? (lore.chatBook?.() ?? '') : '';
     const description = fieldValue(character, 'description');
     const natives = current ? api.nativeOptions(doc) : [];
     side.innerHTML = `
@@ -149,15 +151,34 @@ export function startCharacters(doc, { context, settings, save, api = characterA
         <button type="button" class="pud-ptool${entry.fav ? ' on' : ''}" data-act="fav" title="${entry.fav ? 'Убрать из избранного' : 'В избранное'}">${icon('star')}</button>
         <button type="button" class="pud-ptool pud-danger" data-act="delete" title="Удалить персонажа">${icon('trash')}</button>
       </div>
-      <div class="pud-field"><span>Лорбук персонажа</span>
-        <div class="pud-field-row">
-          <select class="text_pole" data-field="world">
-            <option value="">Нет</option>
-            ${lorebooks.map(name => `<option value="${escapeHtml(name)}" ${entry.world === name ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
-            ${entry.world && !lorebooks.includes(entry.world) ? `<option value="${escapeHtml(entry.world)}" selected>${escapeHtml(entry.world)} (нет файла)</option>` : ''}
-          </select>
-          ${entry.world ? `<button type="button" class="pud-ptool" data-act="lore" title="Открыть лорбук">${icon('book')}</button>` : ''}
+      <div class="pud-field pud-clore"><span>Лорбуки</span>
+        <div class="pud-clore-row"><small>Основной</small>
+          <div class="pud-field-row">
+            <select class="text_pole" data-field="world" aria-label="Основной лорбук">
+              <option value="">Нет</option>
+              ${lorebooks.map(name => `<option value="${escapeHtml(name)}" ${entry.world === name ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+              ${entry.world && !lorebooks.includes(entry.world) ? `<option value="${escapeHtml(entry.world)}" selected>${escapeHtml(entry.world)} (нет файла)</option>` : ''}
+            </select>
+            ${entry.world ? `<button type="button" class="pud-ptool" data-act="lore" data-book="${escapeHtml(entry.world)}" title="Открыть лорбук">${icon('book')}</button>` : ''}
+          </div>
         </div>
+        <div class="pud-clore-row"><small>Дополнительные</small>
+          ${extras.length ? `<div class="pud-clore-chips">${extras.map(name => `<span class="pud-clore-chip"><button type="button" class="pud-clore-name" data-act="lore" data-book="${escapeHtml(name)}" title="Открыть лорбук">${escapeHtml(name)}</button><button type="button" class="pud-clore-x" data-act="extra-del" data-book="${escapeHtml(name)}" title="Отвязать" aria-label="Отвязать ${escapeHtml(name)}">×</button></span>`).join('')}</div>` : ''}
+          <select class="text_pole" data-field="extra-add" aria-label="Добавить дополнительный лорбук">
+            <option value="">+ добавить лорбук</option>
+            ${lorebooks.filter(name => name !== entry.world && !extras.includes(name)).map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}
+          </select>
+        </div>
+        ${current ? `<div class="pud-clore-row"><small>Этого чата</small>
+          <div class="pud-field-row">
+            <select class="text_pole" data-field="chat-book" aria-label="Лорбук этого чата">
+              <option value="">Нет</option>
+              ${lorebooks.map(name => `<option value="${escapeHtml(name)}" ${chatBook === name ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+              ${chatBook && !lorebooks.includes(chatBook) ? `<option value="${escapeHtml(chatBook)}" selected>${escapeHtml(chatBook)} (нет файла)</option>` : ''}
+            </select>
+            ${chatBook ? `<button type="button" class="pud-ptool" data-act="lore" data-book="${escapeHtml(chatBook)}" title="Открыть лорбук">${icon('book')}</button>` : ''}
+          </div>
+        </div>` : ''}
       </div>
       <label class="pud-field"><span>Папка</span><select class="text_pole" data-field="folder">
         <option value="">Без папки</option>
@@ -292,7 +313,7 @@ export function startCharacters(doc, { context, settings, save, api = characterA
     save();
   };
 
-  const doAction = (act, avatar) => {
+  const doAction = (act, avatar, book = '') => {
     const character = raw(avatar);
     if (!character) return;
     // окно уходит в док сразу, не дожидаясь, пока таверна загрузит чат
@@ -315,7 +336,12 @@ export function startCharacters(doc, { context, settings, save, api = characterA
     else if (act === 'persona') run('В персону', () => api.toPersona(avatar));
     else if (act === 'ext') run('Расширенное описание', () => openExt(avatar));
     else if (act === 'image') { imageInput.dataset.avatar = avatar; imageInput.click(); }
-    else if (act === 'lore') run('Лорбук', () => lore.openLorebook(fieldWorld(avatar)));
+    else if (act === 'lore') {
+      const name = book || fieldWorld(avatar);
+      if (shared.loreEditor) shared.loreEditor.open(name); else run('Лорбук', () => lore.openLorebook(name));
+    } else if (act === 'extra-del') {
+      run('Дополнительный лорбук', async () => { lore.setExtraBooks(avatar, lore.extraBooks(avatar).filter(item => item !== book)); state.forceSide = true; });
+    }
   };
   const fieldWorld = avatar => String(raw(avatar)?.data?.extensions?.world ?? '');
 
@@ -346,7 +372,7 @@ export function startCharacters(doc, { context, settings, save, api = characterA
     if (gearItem === 'native') { api.openNativePanel(doc); schedule(); return; }
     if (gearItem) { doAction(gearItem === 'clone' ? 'clone' : gearItem, avatar); return; }
     if (nativeItem) { run('Ещё…', () => api.runNative(doc, nativeItem)); return; }
-    if (act) doAction(act, avatar);
+    if (act) doAction(act, avatar, event.target.closest('[data-act]')?.dataset.book ?? '');
   });
   let descTimer = 0;
   const saveDescription = textarea => run('Описание', async () => {
@@ -373,6 +399,10 @@ export function startCharacters(doc, { context, settings, save, api = characterA
     state.forceSide = true;
     if (field === 'folder') { moveToFolder(settings, avatar, event.target.value, KIND); save(); schedule(); }
     else if (field === 'world') run('Лорбук персонажа', () => api.setWorld(avatar, event.target.value));
+    else if (field === 'extra-add' && event.target.value) {
+      const name = event.target.value;
+      run('Дополнительный лорбук', async () => { lore.setExtraBooks(avatar, [...lore.extraBooks(avatar), name]); });
+    } else if (field === 'chat-book') run('Лорбук чата', () => lore.setChatBook(doc, event.target.value));
   });
   imageInput.addEventListener('change', () => {
     const file = imageInput.files?.[0];

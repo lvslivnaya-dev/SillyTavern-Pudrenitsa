@@ -5,13 +5,39 @@
  * Кнопка палочки уходит в скрытый контейнер (таверна сама показывает и прячет её через inline-стиль).
  */
 import { report } from '../core/guard.js';
+import { personaApi } from '../integration/personas-api.js';
 
 export const MENU_HEAD_ID = 'pud-optext-head';
 const STASH_ID = 'pud-stash';
 // пункты, которые открывают своё подменю: после них меню не закрываем (как у таверны)
 const KEEP_OPEN = '#roll_dice, #sd_gen';
 
-export function startInputBar(doc) {
+export const CHAT_LORE_ID = 'pud-opt-chatlore';
+const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+
+/** Окошко выбора лорбука для открытого чата. */
+async function pickChatLore(doc, lore, shared) {
+  await lore.ready();
+  const ctx = globalThis.SillyTavern?.getContext?.();
+  if (!lore.hasChat() || !ctx) { globalThis.toastr?.info?.('Сначала открой чат.', 'Пудреница'); return; }
+  const current = lore.chatBook();
+  const names = lore.worldNames();
+  const box = doc.createElement('div');
+  box.className = 'pud-ask';
+  box.innerHTML = `<h3>Лорбук этого чата</h3>
+    <p class="pud-hint">Работает только в этом чате, вместе с лорбуками персонажа и глобальными.</p>
+    <select class="text_pole"><option value="">Нет</option>${names.map(name => `<option value="${escapeHtml(name)}" ${name === current ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select>
+    ${current ? '<label class="checkbox_label"><input type="checkbox" data-open><span>открыть его в редакторе</span></label>' : ''}`;
+  if (!await ctx.callGenericPopup(box, ctx.POPUP_TYPE.CONFIRM, '', { okButton: 'Готово', cancelButton: 'Отмена' })) return;
+  const name = box.querySelector('select').value;
+  if (name !== current) {
+    await lore.setChatBook(doc, name);
+    globalThis.toastr?.success?.(name ? `Лорбук чата: «${name}».` : 'Лорбук чата снят.', 'Пудреница');
+  }
+  if (box.querySelector('[data-open]')?.checked && name) shared.loreEditor?.open(name);
+}
+
+export function startInputBar(doc, { lore = personaApi, shared = {} } = {}) {
   const view = doc.defaultView;
   const undo = [];
   let done = false;
@@ -49,6 +75,24 @@ export function startInputBar(doc) {
         wandHome.parent?.insertBefore(wand, wandHome.next?.parentNode === wandHome.parent ? wandHome.next : null);
         stash.remove();
       });
+
+      // «Лорбук чата»: как паспорт в родной панели, но для любого открытого чата, и с группой тоже
+      const chatLore = doc.createElement('a');
+      chatLore.id = CHAT_LORE_ID;
+      chatLore.innerHTML = '<i class="fa-lg fa-solid fa-passport"></i><span>Лорбук чата</span>';
+      optionsContent.append(chatLore);
+      undo.push(() => chatLore.remove());
+      const label = chatLore.querySelector('span');
+      const refreshLabel = async () => {
+        try {
+          await lore.ready();
+          const name = lore.hasChat() ? lore.chatBook() : '';
+          label.textContent = name ? `Лорбук чата: ${name}` : 'Лорбук чата';
+        } catch (error) { report('лорбук чата', error); }
+      };
+      optionsButton.addEventListener('click', refreshLabel);
+      undo.push(() => optionsButton.removeEventListener('click', refreshLabel));
+      chatLore.addEventListener('click', () => pickChatLore(doc, lore, shared).catch(error => report('лорбук чата', error)));
 
       // меню расширений — внутрь меню чата
       const head = doc.createElement('div');

@@ -164,4 +164,24 @@ export const personaApi = {
   },
 
   openLorebook(name) { return mods.world.openWorldInfoEditor?.(name); },
+
+  // ── дополнительные лорбуки персонажа и лорбук чата (как глобус и паспорт в родной панели) ──
+  /** Доп. лорбуки таверна держит в world_info.charLore по имени файла персонажа без расширения. */
+  extraBooks(avatar) {
+    const file = String(avatar ?? '').replace(/\.[^/.]+$/, '');
+    return [...(mods?.world.world_info?.charLore?.find(item => item.name === file)?.extraBooks ?? [])];
+  },
+  setExtraBooks(avatar, books) {
+    mods.world.charSetAuxWorlds(String(avatar ?? '').replace(/\.[^/.]+$/, ''), books);
+  },
+  chatBook: () => String(live()?.chatMetadata?.[mods?.world.METADATA_KEY ?? 'world_info'] ?? ''),
+  hasChat: () => Boolean(live()?.getCurrentChatId?.()),
+  async setChatBook(doc, name) {
+    const ctx = live();
+    if (!ctx?.getCurrentChatId?.()) throw new Error('чат не открыт');
+    const key = mods.world.METADATA_KEY;
+    if (name) ctx.chatMetadata[key] = name; else delete ctx.chatMetadata[key];
+    for (const buttonEl of doc.querySelectorAll('.chat_lorebook_button')) buttonEl.classList.toggle('world_set', Boolean(name));
+    await ctx.saveMetadata();
+  },
 };

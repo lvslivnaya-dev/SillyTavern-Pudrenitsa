@@ -13,6 +13,7 @@ import { startChips } from './src/ui/chips.js';
 import { startPalette } from './src/ui/palette.js';
 import { startHome } from './src/ui/home.js';
 import { startPersonas } from './src/ui/personas.js';
+import { startPersonaSwitch } from './src/ui/persona-switch.js';
 import { startCharacters } from './src/ui/characters.js';
 import { startExtensions } from './src/ui/extensions.js';
 import { startLorebooks } from './src/ui/lorebooks.js';
@@ -26,7 +27,7 @@ const MODULES = [
   { name: 'иконки', start: () => injectSprite(document) },
   { name: 'тема', start: ({ context }) => startTheme(document, context) },
   { name: 'чат', start: () => startChat(document) },
-  { name: 'кнопки поля ввода', start: () => startInputBar(document) },
+  { name: 'кнопки поля ввода', start: ({ shared }) => startInputBar(document, { shared }) },
   { name: 'скрыть сообщения', start: ({ context }) => startHider(document, { context }) },
   { name: 'котик при стриминге', start: ({ context }) => startWalkCat(document, { context }) },
   {
@@ -48,6 +49,10 @@ const MODULES = [
   {
     name: 'персоны',
     start: ({ context, settings }) => startPersonas(document, { context, settings, save: () => context.saveSettingsDebounced?.() }),
+  },
+  {
+    name: 'быстрая смена персоны',
+    start: ({ context, settings }) => startPersonaSwitch(document, { context, settings }),
   },
   {
     name: 'персонажи',
