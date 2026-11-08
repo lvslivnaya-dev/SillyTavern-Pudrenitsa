@@ -534,7 +534,7 @@ export function startLoreEditor(doc, { context, settings, save, api = loreApi, s
 
   // ── связь с библиотекой и таверной ──
   shared.loreEditor = {
-    open: name => openBook(name),
+    open: (name, uid = null) => openBook(name, uid),
     flush: () => persist(),
     /** Библиотека переименовала лорбук. */
     renamed(oldName, newName) {

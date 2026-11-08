@@ -1,6 +1,6 @@
 {
   "name": "sillytavern-pudrenitsa",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "Pastel glass theme and windows for SillyTavern: settings hub, preset chips, personas, characters, extensions and lorebooks.",

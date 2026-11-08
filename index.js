@@ -18,6 +18,7 @@ import { startCharacters } from './src/ui/characters.js';
 import { startExtensions } from './src/ui/extensions.js';
 import { startLorebooks } from './src/ui/lorebooks.js';
 import { startLoreEditor } from './src/ui/lore-editor.js';
+import { startLoreTrace } from './src/ui/lore-trace.js';
 
 const FONT_BASE = new URL('./assets/fonts/', import.meta.url);
 
@@ -69,6 +70,10 @@ const MODULES = [
   {
     name: 'редактор лорбука',
     start: ({ context, settings, shared }) => startLoreEditor(document, { context, settings, save: () => context.saveSettingsDebounced?.(), shared }),
+  },
+  {
+    name: 'что сработало из лорбуков',
+    start: ({ context, settings, shared }) => startLoreTrace(document, { context, settings, save: () => context.saveSettingsDebounced?.(), shared }),
   },
 ];
 

@@ -31,6 +31,8 @@ export function defaultSettings() {
     extensionLinks: {},
     // Редактор лорбука: последний открытый лорбук и сортировка записей
     loreEditor: { book: '', sort: 'native' },
+    // «Что сработало из лорбуков»: значки-ключики под ответами
+    loreTrace: { chips: true },
     // Позиции и размеры окон: имя окна → { left, top, width, height }
     windows: {},
   };

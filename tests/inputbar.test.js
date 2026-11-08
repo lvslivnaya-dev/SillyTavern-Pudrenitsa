@@ -36,9 +36,9 @@ test('одна лапка: меню расширений внутри меню �
   await wait(10);
   assert.equal(toggles, 1);
 
-  assert.ok(document.getElementById(CHAT_LORE_ID), 'в меню есть «Лорбук чата»');
+  assert.ok(document.getElementById(CHAT_LORE_ID), 'в меню есть «Лорбуки чата»');
   await wait(10);
-  assert.equal(document.querySelector(`#${CHAT_LORE_ID} span`).textContent, 'Лорбук чата: Бонтен');
+  assert.equal(document.querySelector(`#${CHAT_LORE_ID} span`).textContent, 'Лорбуки чата · свой: Бонтен');
   undo();
   assert.equal(document.getElementById('extensionsMenuButton').parentElement.id, 'leftSendForm');
   assert.equal(menu.parentElement, document.body);

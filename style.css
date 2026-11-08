@@ -2651,6 +2651,247 @@ body.pud-on .pud-ask h3 {
   font-family: var(--pud-f-head);
   color: var(--pud-rose2);
 }
+/* «Лорбуки чата» */
+body.pud-on .pud-clore h4 {
+  margin: 6px 0 0;
+  font-family: var(--pud-f-head);
+  color: var(--pud-rose2);
+}
+body.pud-on .pud-clore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+body.pud-on .pud-clore-book {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--pud-line2);
+  border-radius: 12px;
+}
+body.pud-on .pud-clore-book.missing {
+  opacity: 0.6;
+}
+body.pud-on .pud-clore-open {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--pud-rose2);
+  cursor: pointer;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-clore-via,
+body.pud-on .pud-clore-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+body.pud-on .pud-clore-tag,
+body.pud-on .pud-clore-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--pud-line2);
+  font-size: 0.82em;
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-clore-x {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font: inherit;
+  color: var(--pud-ink2);
+  cursor: pointer;
+}
+body.pud-on .pud-clore-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--pud-line2);
+}
+body.pud-on .pud-clore-label {
+  font-weight: 700;
+  min-width: 150px;
+}
+body.pud-on .pud-clore-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+body.pud-on .pud-clore .text_pole {
+  width: auto;
+  min-width: 160px;
+  max-width: 100%;
+}
+/* «Что сработало из лорбуков»: ключик под ответом и окно разбора */
+body.pud-on #chat .mes .pud-ltchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--pud-line);
+  background: rgb(var(--pud-card-rgb) / 0.7);
+  color: var(--pud-rose2);
+  font-family: var(--pud-f-ui);
+  font-size: 0.78em;
+  line-height: 1.6;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+body.pud-on #chat .mes .pud-ltchip:hover {
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgb(var(--pud-rose3-rgb) / 0.7);
+}
+body.pud-on #chat .mes .pud-ltchip.warn {
+  border-color: var(--pud-butter);
+}
+body.pud-on #chat .mes .pud-ltchip .pud-i {
+  width: 13px;
+  height: 13px;
+}
+body.pud-on #chat .mes .pud-ltchip-off {
+  color: var(--pud-tech);
+}
+body.pud-on .pud-ltwin .pud-win-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+body.pud-on .pud-lt-pick {
+  flex: 1;
+  min-width: 180px;
+  width: auto;
+}
+body.pud-on .pud-lt-tools .pud-search {
+  flex: 1;
+  min-width: 180px;
+}
+body.pud-on .pud-lt-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88em;
+  color: var(--pud-ink2);
+}
+body.pud-on .pud-lt-sum p {
+  margin: 2px 0;
+}
+body.pud-on .pud-lt-bar {
+  height: 8px;
+  margin: 6px 0 2px;
+  border-radius: 999px;
+  background: var(--pud-line2);
+  overflow: hidden;
+}
+body.pud-on .pud-lt-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pud-rose);
+}
+body.pud-on .pud-lt-bar.warn span {
+  background: var(--pud-butter);
+}
+body.pud-on .pud-lt-sec h4 {
+  display: inline;
+  margin: 6px 0 4px;
+  font-family: var(--pud-f-head);
+  color: var(--pud-rose2);
+}
+body.pud-on section.pud-lt-sec h4 {
+  display: block;
+}
+body.pud-on .pud-lt-sec summary {
+  cursor: pointer;
+  margin: 6px 0 4px;
+}
+body.pud-on .pud-lt-book h5 {
+  margin: 8px 0 4px;
+  font-family: var(--pud-f-ui);
+  font-weight: 700;
+  color: var(--pud-ink2);
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-lt-book ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+body.pud-on .pud-lt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--pud-line2);
+  border-left: 3px solid var(--pud-mint);
+  border-radius: 12px;
+  background: rgb(var(--pud-card-rgb) / 0.55);
+}
+body.pud-on .pud-lt-row.off {
+  border-left-color: var(--pud-butter);
+}
+body.pud-on .pud-lt-row.miss {
+  border-left-color: var(--pud-line);
+}
+body.pud-on .pud-lt-open {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--pud-rose2);
+  cursor: pointer;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-lt-how {
+  color: var(--pud-mint-ink);
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-lt-how.pud-lt-constant,
+body.pud-on .pud-lt-how.pud-lt-sticky {
+  color: var(--pud-ink2);
+}
+body.pud-on .pud-lt-why {
+  color: var(--pud-butter-ink);
+  overflow-wrap: anywhere;
+}
+body.pud-on .pud-lt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+body.pud-on .pud-lt-tag {
+  display: inline-flex;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--pud-line2);
+  font-size: 0.8em;
+  overflow-wrap: anywhere;
+}
 body.pud-on .pud-stats dl {
   display: grid;
   grid-template-columns: 1fr auto;
