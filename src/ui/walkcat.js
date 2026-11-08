@@ -10,8 +10,8 @@ const IDLE_MS = 6000;
 
 // пушистость: каждая часть нарисована дважды — снизу толще контуром, сверху заливкой;
 // из кружков получается одна мягкая «облачная» шубка без швов внутри
-const fur = shapes => `<g class="pud-fur-o">${shapes}</g><g class="pud-fur-i">${shapes}</g>`;
-const circles = list => list.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('');
+export const fur = shapes => `<g class="pud-fur-o">${shapes}</g><g class="pud-fur-i">${shapes}</g>`;
+export const circles = list => list.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('');
 const TAIL = circles([[13, 24, 5], [9, 19, 5.2], [7.5, 13, 5], [9, 7.5, 4.4], [12.5, 4.5, 3.2]]);
 const BODY = circles([[19, 27, 8], [26, 23, 9], [35, 22.5, 9], [42, 25, 8.5], [30, 29, 8], [22, 31, 6], [39, 31, 6], [47, 26, 6.5]])
   + '<path d="M47 12 L48.5 1.5 L55 8Z"/><path d="M58 8 L64 1.5 L63.5 12.5Z"/>'

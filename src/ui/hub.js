@@ -6,6 +6,7 @@
  */
 import { icon } from './icons.js';
 import { createWindow } from './window.js';
+import { SLEEPCAT_SVG } from './sleepcat.js';
 
 export const HUB_BUTTON_ID = 'pud-hub-button';
 export const HUB_CLASS = 'pud-hub-on';
@@ -139,7 +140,7 @@ export function startHub(doc, { settings, save, stopAll, shared = {} }) {
   const links = doc.createElement('div');
   links.className = 'pud-links';
   links.innerHTML = `<div class="pud-tabs-sub">Ссылки</div>${HUB_LINKS.map(link => `<a href="${link.href}" target="_blank" rel="noopener noreferrer">${icon(link.icon)}<span>${link.title}</span></a>`).join('')}
-    <svg class="pud-sleepcat" viewBox="0 0 120 70" aria-hidden="true"><use href="#pud-i-sleepcat"/></svg>`;
+    ${SLEEPCAT_SVG}`;
   tabs.append(links);
 
   select(tabs.querySelector('[data-tab]')?.dataset.tab ?? 'pud');

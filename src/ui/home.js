@@ -12,6 +12,7 @@ import {
 import { tavernApi } from '../integration/tavern.js';
 import { icon } from './icons.js';
 import { createWindow } from './window.js';
+import { SLEEPCAT_SVG } from './sleepcat.js';
 
 export const HOME_ID = 'pud-home';
 export const HOME_CLASS = 'pud-home-on';
@@ -67,7 +68,7 @@ export function startHome(doc, { context, settings, save, api = tavernApi, stora
       <div class="pud-shelf-tags"></div>
       <div class="pud-shelf-sub">Новый</div>
       <button type="button" class="pud-shelf-it pud-temp" title="Чат с ассистентом, который не сохраняется в файл">${icon('moon')}<span>Временный чат</span></button>
-      <svg class="pud-sleepcat" viewBox="0 0 120 70" aria-hidden="true"><use href="#pud-i-sleepcat"/></svg>
+      ${SLEEPCAT_SVG}
     </aside>
     <main class="pud-lib">
       <header class="pud-lib-head">

@@ -1030,8 +1030,8 @@ body.pud-on .pud-hub .pud-links a .pud-i {
   color: var(--pud-rose);
 }
 body.pud-on .pud-hub .pud-sleepcat {
-  width: 120px;
-  height: 70px;
+  width: 132px;
+  height: 79px;
   margin: auto auto 0;
 }
 body.pud-on .pud-hub .pud-panes {
@@ -1524,8 +1524,8 @@ body.pud-on #pud-home .pud-temp {
   color: var(--pud-rose2);
 }
 body.pud-on #pud-home .pud-sleepcat {
-  width: 120px;
-  height: 70px;
+  width: 132px;
+  height: 79px;
   margin: auto auto 0;
   flex: none;
 }
@@ -4443,6 +4443,51 @@ body.pud-on #send_form.pud-walking .pud-cat-tail {
   body.pud-on #send_form.pud-walking .pud-cat-tail {
     animation: none;
   }
+}
+
+/* ═════════ спящий котик (хаб, стартовый экран): шубка и цвета — как у гуляющего ═════════ */
+body.pud-on .pud-sleepcat {
+  overflow: visible;
+}
+body.pud-on .pud-sleepcat .pud-fur-o > * {
+  stroke-width: 2.2;
+}
+body.pud-on .pud-sleep-breath {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: pud-sleep-breath 3.6s ease-in-out infinite;
+}
+body.pud-on .pud-sleep-tail {
+  transform-box: fill-box;
+  transform-origin: 100% 0%;
+  animation: pud-sleep-tail 7s ease-in-out infinite;
+}
+body.pud-on .pud-sleep-z text {
+  fill: var(--pud-lilac);
+  font-family: var(--pud-f-head);
+  font-weight: 700;
+  opacity: 0;
+  animation: pud-sleep-z 3.6s ease-in-out infinite;
+}
+body.pud-on .pud-sleep-z text:nth-child(2) { animation-delay: 1.2s; }
+body.pud-on .pud-sleep-z text:nth-child(3) { animation-delay: 2.4s; }
+@keyframes pud-sleep-breath {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.015, 1.045); }
+}
+@keyframes pud-sleep-tail {
+  0%, 80%, 100% { transform: rotate(0deg); }
+  88% { transform: rotate(-3deg); }
+}
+@keyframes pud-sleep-z {
+  0% { opacity: 0; transform: translateY(4px); }
+  30%, 60% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.pud-on .pud-sleep-breath,
+  body.pud-on .pud-sleep-tail { animation: none; }
+  body.pud-on .pud-sleep-z text { animation: none; opacity: 0.85; }
 }
 
 /* ═════════ лорбуки персонажа: основной, дополнительные, этого чата ═════════ */
