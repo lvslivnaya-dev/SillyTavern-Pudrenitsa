@@ -52,3 +52,139 @@ test('выбор палитры ставит переменные на body, з�
   assert.equal(document.body.style.getPropertyValue('--pud-bg'), '');
   assert.equal(document.body.style.getPropertyValue('--pud-paw'), '');
 });
+
+test('коды цветов: короткие, без решётки и мусор', async () => {
+  const { normalizeHex } = await import('../src/core/palettes.js');
+  assert.equal(normalizeHex('#F8C'), '#ff88cc');
+  assert.equal(normalizeHex(' e8899F '), '#e8899f');
+  assert.equal(normalizeHex('#12345'), null);
+  assert.equal(normalizeHex('red;background:url(x)'), null);
+});
+
+test('сохранённые свои палитры чистятся: битый цвет берётся из основы, чужие id выкидываются', async () => {
+  const { COLOR_KEYS, sanitizeCustomPalettes, paletteById } = await import('../src/core/palettes.js');
+  const out = sanitizeCustomPalettes([
+    { id: 'my-a', title: 'Моя', base: 'noir', dark: true, bg: '#123', narr: 'нет", onclick="x' },
+    { id: 'pink', title: 'чужая' },
+    { id: 'my-a', title: 'дубль' },
+    null,
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].bg, '#112233');
+  assert.equal(out[0].narr, paletteById('noir').narr);
+  for (const key of COLOR_KEYS) assert.match(out[0][key], /^#[0-9a-f]{6}$/);
+  // редактор покрывает все цвета встроенных палитр, кроме полупрозрачного rim
+  const builtIn = Object.keys(paletteById('pink')).filter(key => !['id', 'title', 'hint', 'dark', 'rim'].includes(key));
+  assert.deepEqual([...COLOR_KEYS].sort(), builtIn.sort());
+});
+
+test('своя палитра: копия текущей, цвет кодом и пипеткой, тёмная, удаление в два нажатия', () => {
+  const { document } = new JSDOM('<!doctype html><body></body>').window;
+  const settings = migrateSettings({});
+  assert.deepEqual(settings.customPalettes, []);
+  let pane;
+  const shared = { hub: { addTab: () => { pane = document.createElement('div'); document.body.append(pane); return { pane, remove: () => pane.remove() }; } } };
+  let saved = 0;
+  const undo = startPalette(document, { settings, save: () => { saved++; }, shared });
+  pane.querySelector('[data-palette="latte"]').click();
+  pane.querySelector('[data-pal-new]').click();
+  assert.equal(settings.customPalettes.length, 1);
+  const mine = settings.customPalettes[0];
+  assert.equal(settings.palette, mine.id);
+  assert.equal(mine.base, 'latte');
+  assert.equal(document.body.style.getPropertyValue('--pud-bg'), '#f3ebe1');
+
+  const text = pane.querySelector('[data-color="bg"] [data-color-text]');
+  text.value = '#abc';
+  text.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }));
+  assert.equal(mine.bg, '#aabbcc');
+  assert.equal(document.body.style.getPropertyValue('--pud-bg'), '#aabbcc');
+  assert.equal(pane.querySelector('[data-color="bg"] [data-color-pick]').value, '#aabbcc');
+
+  text.value = 'zzz';
+  text.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }));
+  assert.ok(pane.querySelector('[data-color="bg"]').classList.contains('bad'));
+  assert.equal(mine.bg, '#aabbcc', 'мусор не применяется');
+  text.dispatchEvent(new document.defaultView.Event('change', { bubbles: true }));
+  assert.equal(text.value, '#aabbcc', 'при уходе с поля код возвращается');
+
+  const pick = pane.querySelector('[data-color="narr"] [data-color-pick]');
+  pick.value = '#ff0000';
+  pick.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }));
+  assert.equal(document.body.style.getPropertyValue('--pud-narr'), '#ff0000');
+
+  const dark = pane.querySelector('[data-pal-dark]');
+  dark.checked = true;
+  dark.dispatchEvent(new document.defaultView.Event('change', { bubbles: true }));
+  assert.ok(document.body.classList.contains(DARK_CLASS));
+  assert.ok(saved >= 3);
+
+  pane.querySelector('[data-pal-del]').click();
+  assert.equal(settings.customPalettes.length, 1, 'первое нажатие только спрашивает');
+  pane.querySelector('[data-pal-del]').click();
+  assert.equal(settings.customPalettes.length, 0);
+  assert.equal(settings.palette, 'latte');
+  undo();
+  assert.equal(document.body.style.getPropertyValue('--pud-bg'), '');
+});
+
+test('своя палитра переживает перезапуск', () => {
+  const { document } = new JSDOM('<!doctype html><body></body>').window;
+  const settings = migrateSettings({ palette: 'my-x', customPalettes: [{ id: 'my-x', title: 'X', base: 'pink', bg: '#010203' }] });
+  const undo = startPalette(document, { settings, save: () => {} });
+  assert.equal(document.body.style.getPropertyValue('--pud-bg'), '#010203');
+  undo();
+});
+
+test('палитра по описанию: запрос, разбор ответа, подтяжка контраста, новая своя палитра', async () => {
+  const { buildPalettePrompt, parsePaletteReply, contrast } = await import('../src/core/palette-ai.js');
+  const { paletteById: byId, COLOR_KEYS } = await import('../src/core/palettes.js');
+  const asked = buildPalettePrompt('молочно-розовая', byId('pink'));
+  assert.match(asked.prompt, /молочно-розовая/);
+  for (const key of COLOR_KEYS) assert.ok(asked.systemPrompt.includes(`- ${key}:`), key);
+  assert.throws(() => parsePaletteReply('не знаю'));
+
+  const { document } = new JSDOM('<!doctype html><body></body>').window;
+  const settings = migrateSettings({});
+  let pane;
+  const shared = { hub: { addTab: () => { pane = document.createElement('div'); document.body.append(pane); return { pane, remove: () => pane.remove() }; } } };
+  let request;
+  const reply = '```json\n{"title":"Молочный","dark":false,"bg":"#fff6f2","card":"#fffdfb","narr":"#fff0f0","speech":"#7a9a50","think":"#7a4a90"}\n```';
+  const undo = startPalette(document, { settings, save: () => {}, shared, generate: async opts => { request = opts; return reply; } });
+  const input = pane.querySelector('[data-pal-desc]');
+  input.value = 'молочно-розовая';
+  input.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }));
+  pane.querySelector('[data-pal-gen]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.match(request.prompt, /молочно-розовая/);
+  const made = settings.customPalettes.at(-1);
+  assert.equal(made.title, 'Молочный');
+  assert.equal(settings.palette, made.id);
+  assert.equal(made.bg, '#fff6f2');
+  assert.notEqual(made.narr, '#fff0f0', 'светлый текст на светлом фоне подтянут');
+  assert.ok(contrast(made.narr, made.card) >= 3.5);
+  assert.equal(made.lilac, byId('pink').lilac, 'недостающий цвет взят из прошлой палитры');
+  assert.equal(document.body.style.getPropertyValue('--pud-bg'), '#fff6f2');
+  assert.match(pane.querySelector('.pud-palai-note').textContent, /Готово/);
+  undo();
+});
+
+test('палитра по описанию: ошибка модели не ломает вкладку', async () => {
+  const { document } = new JSDOM('<!doctype html><body></body>').window;
+  const settings = migrateSettings({});
+  let pane;
+  const shared = { hub: { addTab: () => { pane = document.createElement('div'); document.body.append(pane); return { pane, remove: () => pane.remove() }; } } };
+  const original = console.error; console.error = () => {};
+  try {
+    const undo = startPalette(document, { settings, save: () => {}, shared, generate: async () => { throw new Error('нет соединения'); } });
+    const input = pane.querySelector('[data-pal-desc]');
+    input.value = 'мятная';
+    input.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }));
+    pane.querySelector('[data-pal-gen]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(settings.customPalettes.length, 0);
+    assert.match(pane.querySelector('.pud-palai-note').textContent, /нет соединения/);
+    assert.equal(pane.querySelector('[data-pal-gen]').disabled, false);
+    undo();
+  } finally { console.error = original; }
+});

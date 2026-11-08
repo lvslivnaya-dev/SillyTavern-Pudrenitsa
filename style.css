@@ -4134,6 +4134,124 @@ body.pud-on .pud-pal-swatch span:first-child {
   height: 34px;
   border-radius: 10px;
 }
+/* свои палитры: карточка «+» и редактор цветов */
+body.pud-on .pud-palmine {
+  margin-top: 18px;
+}
+body.pud-on .pud-palai {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+body.pud-on .pud-palai .text_pole {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+body.pud-on .pud-palai .menu_button {
+  flex: none;
+  margin: 0;
+}
+body.pud-on .pud-palai-note {
+  margin-top: 6px;
+}
+body.pud-on .pud-palnew .pud-pal-swatch {
+  justify-content: center;
+  background: var(--pud-tint2);
+  border: 1px dashed var(--pud-line);
+  color: var(--pud-rose2);
+  font-size: 1.6em;
+}
+body.pud-on .pud-paledit {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--pud-line);
+  border-radius: 18px;
+  background: var(--pud-glass-hi);
+}
+body.pud-on .pud-paledit .pud-field-row {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+body.pud-on .pud-paledit .pud-field-row > .pud-paldark,
+body.pud-on .pud-paledit .pud-field-row > .pud-paldel {
+  flex: none;
+}
+body.pud-on .pud-paldel.armed {
+  background: var(--pud-danger);
+  color: var(--pud-on-accent);
+}
+body.pud-on .pud-palgroup {
+  margin-top: 8px;
+  border-top: 1px solid var(--pud-line2);
+  padding-top: 6px;
+}
+body.pud-on .pud-palgroup > summary {
+  cursor: pointer;
+  font-family: var(--pud-f-head);
+  font-weight: 700;
+  color: var(--pud-ink);
+  padding: 4px 0;
+}
+body.pud-on .pud-palcolors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 12px 16px;
+  margin-top: 6px;
+}
+body.pud-on .pud-palcolor {
+  display: grid;
+  grid-template-columns: 36px 1fr 96px;
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+}
+body.pud-on .pud-palcolor > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+body.pud-on .pud-palcolor > span b {
+  color: var(--pud-ink);
+  font-size: 0.95em;
+}
+body.pud-on .pud-palcolor > span small {
+  color: var(--pud-tech);
+  font-size: 0.8em;
+  line-height: 1.35;
+}
+body.pud-on .pud-palcolor input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--pud-line);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+body.pud-on .pud-palcolor input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+body.pud-on .pud-palcolor input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+body.pud-on .pud-palcolor input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+body.pud-on .pud-palcolor .text_pole {
+  margin: 0;
+  font-family: var(--pud-f-mono, monospace);
+  text-transform: lowercase;
+}
+body.pud-on .pud-palcolor.bad .text_pole {
+  border-color: var(--pud-danger);
+  box-shadow: 0 0 0 2px rgb(var(--pud-rose2-rgb) / 0.25);
+}
 
 /* ═════════ кнопка «скрыть сообщения от ИИ» ═════════ */
 body.pud-on .gg-regular-buttons-container > .pud-hidebtn {

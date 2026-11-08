@@ -78,7 +78,102 @@ export const PALETTES = [
   },
 ];
 
-export const paletteById = id => PALETTES.find(item => item.id === id) ?? PALETTES[0];
+/** Свои палитры Ани (settings.customPalettes) ищутся вместе со встроенными. */
+export const paletteById = (id, custom = []) => [...PALETTES, ...custom].find(item => item.id === id) ?? PALETTES[0];
+
+/**
+ * Поля редактора своей палитры, сгруппированные по смыслу. Сюда входят все цвета палитры,
+ * кроме rim: он полупрозрачный и зависит только от «тёмная/светлая».
+ */
+export const COLOR_GROUPS = [
+  { title: 'Сообщения в чате', open: true, fields: [
+    ['narr', 'Повествование', 'обычный текст сообщений'],
+    ['speech', 'Речь', 'текст в «кавычках»'],
+    ['think', 'Мысли', 'текст в *звёздочках*'],
+    ['skip', 'Таймскипы', 'надпись и пунктир [Timeskip …]'],
+    ['lilacSoft', 'Фон твоих сообщений', 'подложка сообщений персоны; ещё кружки-заглушки вместо фото'],
+    ['lilac', 'Уголки твоих сообщений', 'цветная рамка-уголок у сообщений персоны; метка постоянной записи в лорбуке'],
+  ] },
+  { title: 'Фон и окна', open: true, fields: [
+    ['bg', 'Фон страницы', 'сплошной цвет под картинкой фона'],
+    ['glass', 'Стекло', 'верхняя панелька, окна Пудреницы, шторки, панель поля ввода, меню-лапка'],
+    ['card', 'Подложка', 'фон сообщений персонажа, кнопок, полей, карточек в библиотеках'],
+    ['line', 'Рамки', 'обводка полей ввода, чекбоксов, кнопок пресета, кода в сообщениях'],
+    ['line2', 'Разделители', 'тонкие линии в окнах: под заголовком, между вкладками и пунктами; контур ушек'],
+    ['shade', 'Тени', 'тени под окнами, кнопками и аватарками'],
+  ] },
+  { title: 'Кнопки и значки', open: false, fields: [
+    ['accent2', 'Значки и заголовки', 'значки верхней панельки, текст кнопок, имена в чате, заголовки, галочки, стрелки свайпа, бледные лапки на фоне'],
+    ['accent', 'Нажатое и выбранное', 'открытая кнопка верхней панельки, включённые кнопки, ползунки, полоса прокрутки, рамка поля в фокусе, уголки сообщений персонажа, лапки-значки'],
+    ['accent3', 'Ореол при наведении', 'свечение вокруг кнопки под мышкой, выделенный текст, розовое внутри ушек'],
+    ['tint', 'Низ пуговок', 'нижняя половина градиента у кнопок и значков верхней панельки, заглушки обложек лорбуков'],
+    ['tint2', 'Выбранная строка', 'отмеченные строки в списках, пункт меню-лапки под мышкой, сами ушки окон'],
+    ['puffline', 'Ступенька под пуговками', 'тёмный край под кнопками, кнопками у поля ввода, ползунком прокрутки'],
+    ['onAccent', 'Текст на нажатом', 'значок открытой кнопки панельки, текст на включённых кнопках, крестик окна, кнопка «Отправить»'],
+  ] },
+  { title: 'Текст в окнах', open: false, fields: [
+    ['ink', 'Основной текст', 'окна, поля ввода, поле сообщения, всплывашки, выпадающие списки'],
+    ['ink2', 'Второстепенный текст', 'подсказки в окнах, названия вкладок, кнопки пресета, ссылки'],
+    ['tech', 'Мелкие подписи', 'плейсхолдеры, номер и время сообщения, подписи над полями, даты чатов'],
+  ] },
+  { title: 'Метки', open: false, fields: [
+    ['mint', 'Включено', 'точка у включённой кнопки пресета, переключатели расширений, всплывашка «успех»'],
+    ['mintSoft', 'Включено: фон', 'включённая кнопка пресета, метка «надета» у персоны, глобальный лорбук'],
+    ['mintInk', 'Включено: текст', 'надпись на метках «надета» и «глобальный»'],
+    ['butter', 'Папки и избранное', 'значки папок, звёздочки избранного, всплывашка-предупреждение'],
+    ['butterSoft', 'Избранное: фон', 'открытая папка, метки «избранное» и «есть обновление», кнопка перезагрузки'],
+    ['butterInk', 'Избранное: текст', 'надпись на этих метках и кнопках'],
+    ['danger', 'Опасное', 'удаление, кнопка «Стоп» генерации, всплывашка-ошибка'],
+  ] },
+  { title: 'Котик', open: false, fields: [
+    ['catFur', 'Шёрстка', 'котик, который гуляет по полю ввода, пока ИИ пишет'],
+    ['catEye', 'Глазки', 'глазки этого котика'],
+  ] },
+];
+export const COLOR_KEYS = COLOR_GROUPS.flatMap(group => group.fields.map(([key]) => key));
+
+/** «#abc», «abc», «#AABBCC» → «#aabbcc»; всё остальное → null. Только такие строки попадают в стили. */
+export function normalizeHex(text) {
+  const value = String(text ?? '').trim().replace(/^#/, '');
+  if (/^[0-9a-f]{3}$/i.test(value)) return `#${value.split('').map(ch => ch + ch).join('')}`.toLowerCase();
+  if (/^[0-9a-f]{6}$/i.test(value)) return `#${value}`.toLowerCase();
+  return null;
+}
+
+const rimFor = dark => dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.85)';
+export const CUSTOM_PREFIX = 'my-';
+
+/** Новая своя палитра — копия base (встроенной или своей). */
+export function makeCustomPalette(base, custom = [], now = Date.now()) {
+  let id = `${CUSTOM_PREFIX}${now.toString(36)}`;
+  while (custom.some(item => item.id === id)) id += 'x';
+  const copy = { id, title: base.id.startsWith(CUSTOM_PREFIX) ? `${base.title}, копия` : `${base.title} (моя)`, hint: 'своя', base: base.base ?? base.id, dark: Boolean(base.dark), rim: rimFor(Boolean(base.dark)) };
+  for (const key of COLOR_KEYS) copy[key] = normalizeHex(base[key]) ?? paletteById(copy.base)[key];
+  return copy;
+}
+
+/** Чистит сохранённые свои палитры: битый цвет берётся из палитры-основы, чужие поля выбрасываются. */
+export function sanitizeCustomPalettes(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id.startsWith(CUSTOM_PREFIX) || seen.has(raw.id)) continue;
+    seen.add(raw.id);
+    const base = paletteById(typeof raw.base === 'string' ? raw.base : DEFAULT_PALETTE);
+    const dark = typeof raw.dark === 'boolean' ? raw.dark : base.dark;
+    const clean = { id: raw.id, title: String(raw.title ?? '').trim().slice(0, 60) || 'Моя палитра', hint: 'своя', base: base.id, dark, rim: rimFor(dark) };
+    for (const key of COLOR_KEYS) clean[key] = normalizeHex(raw[key]) ?? base[key];
+    out.push(clean);
+  }
+  return out;
+}
+
+/** Переключатель «тёмная»: меняет и полупрозрачный ободок. */
+export function setCustomDark(palette, dark) {
+  palette.dark = Boolean(dark);
+  palette.rim = rimFor(palette.dark);
+}
 
 const enc = color => color.replace('#', '%23');
 const PAW = "%3Cellipse cx='12' cy='15.5' rx='5' ry='4.2'/%3E%3Cellipse cx='5.6' cy='10' rx='2' ry='2.6'/%3E%3Cellipse cx='9.4' cy='6.2' rx='2' ry='2.7'/%3E%3Cellipse cx='14.6' cy='6.2' rx='2' ry='2.7'/%3E%3Cellipse cx='18.4' cy='10' rx='2' ry='2.6'/%3E";
@@ -94,9 +189,13 @@ export function paletteImages(p) {
   };
 }
 
-/** Переменные палитры для body.style. «Пудре» они не нужны: она уже в style.css. */
-export function paletteVars(id) {
-  const p = paletteById(id);
+/**
+ * Переменные палитры для body.style. «Пудре» они не нужны: она уже в style.css.
+ * @param {string|object} idOrPalette id палитры или сама палитра
+ * @param {object[]} [custom] свои палитры, среди которых тоже искать id
+ */
+export function paletteVars(idOrPalette, custom = []) {
+  const p = typeof idOrPalette === 'object' && idOrPalette ? idOrPalette : paletteById(idOrPalette, custom);
   if (p.id === DEFAULT_PALETTE) return {};
   const glass = hexToRgb(p.glass);
   const [r, g, b] = hexToRgb(p.accent).split(' ');

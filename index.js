@@ -36,7 +36,7 @@ const MODULES = [
   },
   {
     name: 'палитра',
-    start: ({ context, settings, shared }) => startPalette(document, { settings, save: () => context.saveSettingsDebounced?.(), shared }),
+    start: ({ context, settings, shared }) => startPalette(document, { settings, save: () => context.saveSettingsDebounced?.(), shared, generate: opts => context.generateRaw(opts) }),
   },
   {
     name: 'кнопки пресета',

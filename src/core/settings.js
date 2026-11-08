@@ -7,8 +7,10 @@ export function defaultSettings() {
   return {
     version: SETTINGS_VERSION,
     enabled: true,
-    // Палитра: pink | graphite | noir | latte | matcha (src/core/palettes.js)
+    // Палитра: pink | graphite | noir | latte | matcha | id своей палитры (src/core/palettes.js)
     palette: 'pink',
+    // Свои палитры: копии встроенных с поправленными цветами, id начинается с «my-»
+    customPalettes: [],
     // Кнопки пресета: chipKey(пресет, профиль) → [{ id, label }]
     chips: {},
     // Папки: { id, name, parent } (parent нужен лорбукам, у остальных null)
