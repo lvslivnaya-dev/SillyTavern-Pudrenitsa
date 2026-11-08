@@ -11,6 +11,8 @@ export function defaultSettings() {
     palette: 'pink',
     // Свои палитры: копии встроенных с поправленными цветами, id начинается с «my-»
     customPalettes: [],
+    // Лапки: бледный узор на фоне и значки-лапки в сообщениях чата
+    paws: { background: true, chat: true },
     // Кнопки пресета: chipKey(пресет, профиль) → [{ id, label }]
     chips: {},
     // Папки: { id, name, parent } (parent нужен лорбукам, у остальных null)

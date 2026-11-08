@@ -12,6 +12,12 @@ import {
 import { buildPalettePrompt, paletteFromReply, parsePaletteReply } from '../core/palette-ai.js';
 
 export const DARK_CLASS = 'pud-dark';
+/** Классы на body, которые убирают лапки: ключ настройки settings.paws → класс. */
+export const NO_PAW_CLASSES = { background: 'pud-nopaw-bg', chat: 'pud-nopaw-chat' };
+const PAW_OPTIONS = [
+  ['background', 'Лапки на фоне', 'бледный узор из лапок поверх картинки фона'],
+  ['chat', 'Лапки в чате', 'кружок с лапкой у аватарки и лапка у имени в каждом сообщении'],
+];
 const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
 /** Ставит палитру на body. Возвращает имена переменных, которые поставила. */
@@ -69,8 +75,15 @@ export function startPalette(doc, { settings, save, shared = {}, generate }) {
   const known = id => [...PALETTES, ...custom()].some(item => item.id === id);
   if (!known(settings.palette)) settings.palette = DEFAULT_PALETTE;
   let applied = applyPalette(doc, settings.palette, [], custom());
+  const applyPaws = () => {
+    for (const [key, cls] of Object.entries(NO_PAW_CLASSES)) doc.body.classList.toggle(cls, settings.paws?.[key] === false);
+  };
+  applyPaws();
   const reapply = () => { applied = applyPalette(doc, settings.palette, applied, custom()); };
-  const undo = [() => { applyPalette(doc, DEFAULT_PALETTE, applied); doc.body.classList.remove(DARK_CLASS); }];
+  const undo = [() => {
+    applyPalette(doc, DEFAULT_PALETTE, applied);
+    doc.body.classList.remove(DARK_CLASS, ...Object.values(NO_PAW_CLASSES));
+  }];
 
   const tab = shared.hub?.addTab?.('palette', 'Палитра', 'wand');
   if (tab) {
@@ -88,6 +101,13 @@ export function startPalette(doc, { settings, save, shared = {}, generate }) {
         <p class="pud-hint">Цвета всей Пудреницы: окна, кнопки, чат. Нажми на палитру, и она сразу включится.</p>
         <div class="pud-palettes" role="radiogroup" aria-label="Палитра">
           ${PALETTES.map(p => cardHtml(p, settings.palette)).join('')}
+        </div>
+        <div class="pud-tabs-sub pud-palmine">Лапки</div>
+        <div class="pud-palpaws">
+          ${PAW_OPTIONS.map(([key, label, where]) => `<label class="checkbox_label">
+              <input type="checkbox" data-paws="${key}"${settings.paws?.[key] !== false ? ' checked' : ''}>
+              <span><b>${label}</b> <small>${where}</small></span>
+            </label>`).join('')}
         </div>
         <div class="pud-tabs-sub pud-palmine">Мои палитры</div>
         ${generate ? `<div class="pud-palai">
@@ -222,6 +242,12 @@ export function startPalette(doc, { settings, save, shared = {}, generate }) {
     tab.pane.addEventListener('change', event => {
       try {
         const target = event.target;
+        if (target.matches('[data-paws]')) {
+          settings.paws = { ...settings.paws, [target.dataset.paws]: target.checked };
+          applyPaws();
+          save();
+          return;
+        }
         if (target.matches('[data-pal-dark]')) {
           const palette = editing();
           if (!palette) return;

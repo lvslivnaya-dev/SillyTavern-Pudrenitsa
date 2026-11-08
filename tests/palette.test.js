@@ -188,3 +188,30 @@ test('палитра по описанию: ошибка модели не ло�
     undo();
   } finally { console.error = original; }
 });
+
+test('лапки на фоне и в чате выключаются галочками и запоминаются', async () => {
+  const { NO_PAW_CLASSES } = await import('../src/ui/palette.js');
+  const { document } = new JSDOM('<!doctype html><body></body>').window;
+  const settings = migrateSettings({});
+  assert.deepEqual(settings.paws, { background: true, chat: true });
+  let pane;
+  const shared = { hub: { addTab: () => { pane = document.createElement('div'); document.body.append(pane); return { pane, remove: () => pane.remove() }; } } };
+  let saved = 0;
+  const undo = startPalette(document, { settings, save: () => { saved++; }, shared });
+  const box = pane.querySelector('[data-paws="background"]');
+  assert.equal(box.checked, true);
+  box.checked = false;
+  box.dispatchEvent(new document.defaultView.Event('change', { bubbles: true }));
+  assert.equal(settings.paws.background, false);
+  assert.equal(settings.paws.chat, true);
+  assert.ok(document.body.classList.contains(NO_PAW_CLASSES.background));
+  assert.equal(document.body.classList.contains(NO_PAW_CLASSES.chat), false);
+  assert.equal(saved, 1);
+  undo();
+  assert.equal(document.body.classList.contains(NO_PAW_CLASSES.background), false);
+
+  const again = startPalette(document, { settings: migrateSettings({ paws: { chat: false } }), save: () => {} });
+  assert.ok(document.body.classList.contains(NO_PAW_CLASSES.chat));
+  assert.equal(document.body.classList.contains(NO_PAW_CLASSES.background), false);
+  again();
+});

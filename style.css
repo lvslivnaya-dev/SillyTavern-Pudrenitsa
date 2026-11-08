@@ -141,6 +141,11 @@ body.pud-on #bg1::after {
     linear-gradient(160deg, rgb(var(--pud-glass-rgb) / 0.8), rgb(var(--pud-glass-rgb) / 0.76));
 }
 
+/* лапки на фоне выключены: остаётся только вуаль */
+body.pud-on.pud-nopaw-bg #bg1::after {
+  background: linear-gradient(160deg, rgb(var(--pud-glass-rgb) / 0.8), rgb(var(--pud-glass-rgb) / 0.76));
+}
+
 body.pud-on::selection,
 body.pud-on ::selection {
   background: var(--pud-rose3);
@@ -629,6 +634,11 @@ body.pud-on:not(.documentstyle):not(.waifuMode) #chat .mes[is_user="true"]::afte
   right: auto;
   left: calc(var(--pud-portrait-w) + 70px);
   filter: hue-rotate(60deg);
+}
+/* лапки в чате выключены: ни кружка у аватарки, ни лапки у имени */
+body.pud-on.pud-nopaw-chat:not(.documentstyle):not(.waifuMode) #chat .mes .avatar::after,
+body.pud-on.pud-nopaw-chat:not(.documentstyle):not(.waifuMode) #chat .mes::after {
+  content: none;
 }
 body.pud-on:not(.documentstyle):not(.waifuMode) #chat .mes .mes_text {
   padding-right: 0;
@@ -4137,6 +4147,15 @@ body.pud-on .pud-pal-swatch span:first-child {
 /* свои палитры: карточка «+» и редактор цветов */
 body.pud-on .pud-palmine {
   margin-top: 18px;
+}
+body.pud-on .pud-palpaws {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+body.pud-on .pud-palpaws small {
+  color: var(--pud-tech);
 }
 body.pud-on .pud-palai {
   display: flex;
