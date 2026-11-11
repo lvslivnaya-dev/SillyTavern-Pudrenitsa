@@ -61,3 +61,33 @@ test('без нужной разметки таверны startChat ничего
   assert.equal(document.getElementById(REGEN_ID), null);
   undo();
 });
+
+test('стриминг и новые сообщения: размечается только то сообщение, которое изменилось', async () => {
+  const view = page('<div id="chat"><div class="mes"><div class="mes_text"><p>Старое [не таймскип] сообщение.</p></div></div></div>');
+  const doc = view.document;
+  const chat = doc.getElementById('chat');
+  const stop = startChat(doc);
+  const wait = () => new Promise(resolve => setTimeout(resolve, 60));
+  const old = chat.querySelector('.mes_text');
+  const walked = [];
+  const original = doc.createTreeWalker.bind(doc);
+  doc.createTreeWalker = (root, ...rest) => { walked.push(root); return original(root, ...rest); };
+
+  chat.insertAdjacentHTML('beforeend', '<div class="mes"><div class="mes_text"><p>Он ушёл.</p></div></div>');
+  await wait();
+  const fresh = chat.querySelectorAll('.mes_text')[1];
+  assert.equal(walked.length, 0, 'в новом сообщении нет скобок: обход не нужен');
+
+  fresh.querySelector('p').firstChild.nodeValue = 'Он ушёл. [Timeskip: утро]';
+  await wait();
+  assert.equal(fresh.querySelectorAll(`.${SKIP_CLASS}`).length, 1, 'токен стрима дописал таймскип');
+  fresh.insertAdjacentHTML('beforeend', '<p>[Таймскип: вечер] Дальше.</p>');
+  await wait();
+  assert.equal(fresh.querySelectorAll(`.${SKIP_CLASS}`).length, 2, 'новый абзац того же сообщения');
+  assert.ok(walked.length > 0 && walked.every(root => root === fresh), 'старое сообщение не перечитывалось');
+  assert.equal(old.querySelectorAll(`.${SKIP_CLASS}`).length, 0);
+
+  doc.createTreeWalker = original;
+  stop();
+  assert.equal(chat.querySelectorAll(`.${SKIP_CLASS}`).length, 0);
+});

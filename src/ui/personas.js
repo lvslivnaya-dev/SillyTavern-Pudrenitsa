@@ -16,6 +16,7 @@ import { personaApi } from '../integration/personas-api.js';
 import { icon } from './icons.js';
 import { createWindow } from './window.js';
 import { skipSameHtml } from './dom.js';
+import { startPersonaLook } from './persona-look.js';
 
 export const PERSONA_BUTTON_ID = 'pud-persona-button';
 export const NATIVE_PERSONA_DRAWER = 'persona-management-button';
@@ -95,6 +96,10 @@ export function startPersonas(doc, { context, settings, save, api = personaApi, 
   const descCount = descWin.body.querySelector('.pud-pdesc-count');
   let descAvatar = '';
 
+  // ── «Внешность по картинке» ──
+  const lookWin = startPersonaLook(doc, { context, settings, save, api });
+  undo.push(() => lookWin.destroy());
+
   // ── кнопка на верхней панели вместо родной ──
   const button = doc.createElement('div');
   button.id = PERSONA_BUTTON_ID;
@@ -166,6 +171,7 @@ export function startPersonas(doc, { context, settings, save, api = personaApi, 
       <label class="pud-field"><span>Имя</span><input class="text_pole" data-field="name" value="${escapeHtml(persona.name)}" maxlength="120"></label>
       <label class="pud-field"><span>Титул (виден только здесь)</span><input class="text_pole" data-field="title" value="${escapeHtml(persona.title)}" maxlength="120" placeholder="например, «бариста из Сибуи»"></label>
       <button type="button" class="pud-pdescbtn" data-act="desc">${icon('doc')}<span>Описание</span><span class="pud-tech">${plural(words(persona.description), 'слово', 'слова', 'слов')}</span></button>
+      <button type="button" class="pud-pdescbtn" data-act="look" title="Описать внешность по картинке и перевести описание на английский">${icon('image')}<span>Внешность по картинке</span></button>
       <div class="pud-field"><span>Привязана к персонажам</span>
         <div class="pud-conn">
           ${persona.connections.map(link => `<span class="pud-conn-chip" data-type="${link.type}" data-id="${escapeHtml(link.id)}">${escapeHtml(link.name ?? nameOf(link) ?? link.id)}<button type="button" data-act="unlink" title="Отвязать">×</button></span>`).join('')}
@@ -429,6 +435,7 @@ export function startPersonas(doc, { context, settings, save, api = personaApi, 
     if (!act || !avatar) return;
     if (act === 'wear') run('Надеть персону', () => api.wear(avatar));
     else if (act === 'desc') run('Описание персоны', () => openDesc(avatar));
+    else if (act === 'look') lookWin.open(avatar);
     else if (act === 'image') run('Картинка персоны', () => api.changeImage(doc, avatar));
     else if (act === 'lore') run('Лорбук персоны', () => api.openLorebook(byAvatar(avatar)?.lorebook));
     else if (act === 'link-open') { state.linkOpen = !state.linkOpen; schedule(); }

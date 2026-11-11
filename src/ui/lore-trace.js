@@ -10,6 +10,8 @@
  */
 import { report } from '../core/guard.js';
 import { createRecorder, storable, chipText, byBook, matches, howText, whyText, positionLabel, EXTRA_KEY } from '../core/lore-trace.js';
+import { auditChat, wordsText, withoutKey, MIN_REPLIES } from '../core/lore-audit.js';
+import { loreApi } from '../integration/lorebooks-api.js';
 import { createWindow } from './window.js';
 import { icon } from './icons.js';
 
@@ -49,7 +51,7 @@ export function tapConsole(target, feed) {
  * @param {Document} doc
  * @param {{ context: any, settings: any, save?: () => void, shared?: any, consoleTarget?: any }} deps
  */
-export function startLoreTrace(doc, { context, settings, save = () => {}, shared = {}, consoleTarget = console }) {
+export function startLoreTrace(doc, { context, settings, save = () => {}, shared = {}, consoleTarget = console, api = loreApi }) {
   const view = doc.defaultView;
   const undo = [];
   const ctx = () => live() ?? context;
@@ -61,6 +63,8 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
     pending: null,   // ждёт своего ответа
     check: null,     // последняя «Проверить сейчас»
     wantCheck: false,
+    tab: 'reply',    // 'reply' - разбор одного ответа, 'audit' - ключи за весь чат
+    stripped: new Set(), // ключи, убранные из записей в этой сессии: у них кнопка уже не нужна
     view: 'last',    // 'last' | 'check' | номер сообщения
     query: '',
     checking: false,
@@ -234,6 +238,11 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
     win = createWindow(doc, { id: WIN_ID, title: 'Что сработало из лорбуков', icon: 'key', width: 640, store: settings.windows, save });
     win.element.classList.add('pud-ltwin');
     win.body.innerHTML = `
+      <div class="pud-lt-tabs" role="tablist">
+        <button type="button" class="pud-lt-tab" role="tab" data-act="tab" data-tab="reply">Ответ</button>
+        <button type="button" class="pud-lt-tab" role="tab" data-act="tab" data-tab="audit" title="Какие ключи и записи отправляют лорбуки за весь чат">Аудит ключей</button>
+      </div>
+      <div class="pud-lt-reply-tools">
       <div class="pud-ptools pud-lt-tools">
         <button type="button" class="pud-ptool" data-act="prev" title="Ответ раньше">‹</button>
         <select class="text_pole pud-lt-pick" aria-label="Какой ответ показать"></select>
@@ -244,6 +253,7 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
         <label class="pud-search">${icon('search')}<input type="search" placeholder="Искать запись, книгу или ключ" aria-label="Поиск записей"></label>
         <label class="pud-lt-opt"><input type="checkbox" data-act="chips"><span>значки под ответами</span></label>
       </div>
+      </div>
       <div class="pud-lt-sum"></div>
       <div class="pud-lt-body"></div>`;
     parts = {
@@ -253,6 +263,8 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
       sum: win.body.querySelector('.pud-lt-sum'),
       body: win.body.querySelector('.pud-lt-body'),
       check: win.body.querySelector('[data-act="check"]'),
+      replyTools: win.body.querySelector('.pud-lt-reply-tools'),
+      tabs: [...win.body.querySelectorAll('.pud-lt-tab')],
     };
     parts.pick.addEventListener('change', () => {
       const value = parts.pick.value;
@@ -263,6 +275,9 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
     parts.chips.addEventListener('change', () => { prefs.chips = parts.chips.checked; save(); renderAllChips(); });
     win.body.addEventListener('click', event => {
       const act = event.target.closest('[data-act]')?.dataset.act;
+      if (act === 'tab') { state.tab = event.target.closest('[data-tab]').dataset.tab; renderWindow(); return; }
+      if (act === 'copy-words') { copyWords(); return; }
+      if (act === 'strip-key') { stripKey(event.target.closest('[data-key]').dataset.key); return; }
       if (act === 'prev' || act === 'next') { step(act === 'prev' ? 1 : -1); return; }
       if (act === 'check') { runCheck(); return; }
       const open = event.target.closest('[data-book]');
@@ -345,9 +360,126 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
     if (parts.pick.dataset.html !== html) { parts.pick.innerHTML = html; parts.pick.dataset.html = html; }
   };
 
+  /** Слова шумных ключей в буфер: по одному в строке, для таблицы «Регексы» в Obsidian. */
+  const copyWords = async () => {
+    const text = wordsText(auditChat(ctx()?.chat));
+    if (!text) { globalThis.toastr?.info?.('Шумных ключей нет.', 'Пудреница'); return; }
+    try {
+      await view.navigator.clipboard.writeText(text);
+      globalThis.toastr?.success?.('Слова скопированы.', 'Пудреница');
+    } catch (error) {
+      report('аудит ключей: буфер', error);
+      globalThis.toastr?.warning?.(`Не удалось скопировать. Вот слова: ${text.replace(/\n/g, ', ')}`, 'Пудреница', { timeOut: 15000 });
+    }
+  };
+
+  /**
+   * Убирает шумный вторичный ключ из записей, которые он пускал. Лорбук правится по-настоящему,
+   * поэтому сначала показан список записей и спрошено согласие. Сами записи остаются.
+   */
+  const stripKey = async key => {
+    try {
+      const item = auditChat(ctx()?.chat)?.secondary.find(row => row.key === key);
+      if (!item) return;
+      await api.ready();
+      const plan = []; // { book, uid, title, removed }
+      for (const book of new Set(item.refs.map(ref => ref.w))) {
+        const data = await api.load(book);
+        for (const ref of item.refs.filter(row => row.w === book)) {
+          const entry = data?.entries?.[ref.u];
+          if (!entry) continue;
+          const { removed } = withoutKey(entry, key);
+          if (removed) plan.push({ book, uid: ref.u, title: ref.t, removed });
+        }
+      }
+      if (!plan.length) { globalThis.toastr?.info?.(`Ключа «${key}» в этих записях уже нет.`, 'Пудреница'); state.stripped.add(key); renderWindow(); return; }
+      const list = plan.slice(0, 14).map(row => `<li>${escapeHtml(row.title)} <small>(${escapeHtml(row.book)})</small></li>`).join('');
+      const box = doc.createElement('div');
+      box.innerHTML = `<h3>Убрать ключ «${escapeHtml(key)}»</h3>
+        <p>Из вторичных ключей ${plan.length} ${plan.length === 1 ? 'записи' : 'записей'}. Сами записи остаются, основные ключи не трогаются, а эта запись перестанет входить только из-за слова «${escapeHtml(key.replace(/…/g, ''))}».</p>
+        <ul style="text-align:left">${list}${plan.length > 14 ? `<li>…и ещё ${plan.length - 14}</li>` : ''}</ul>
+        <p><small>Это правка твоих лорбуков. Вернуть ключ можно в редакторе записи.</small></p>`;
+      const c = ctx();
+      const answer = await c.callGenericPopup(box, c.POPUP_TYPE.CONFIRM, '', { okButton: `Убрать из ${plan.length}`, cancelButton: 'Отмена' });
+      if (!answer) return;
+      let changed = 0;
+      for (const book of new Set(plan.map(row => row.book))) {
+        const data = await api.load(book); // свежая копия: пока было окно, лорбук мог измениться
+        if (!data?.entries) continue;
+        for (const row of plan.filter(entry => entry.book === book)) {
+          const entry = data.entries[row.uid];
+          if (!entry) continue;
+          const { keys, removed } = withoutKey(entry, key);
+          if (!removed) continue;
+          entry.keysecondary = keys;
+          api.setOriginal?.(data, row.uid, 'keysecondary', keys);
+          changed += 1;
+        }
+        await api.save(book, data);
+      }
+      state.stripped.add(key);
+      globalThis.toastr?.success?.(`Ключ «${key}» убран из записей: ${changed}.`, 'Пудреница');
+      renderWindow();
+    } catch (error) {
+      report('аудит ключей: убрать ключ', error);
+      globalThis.toastr?.error?.('Не получилось изменить лорбук. Подробности в консоли (F12).', 'Пудреница');
+    }
+  };
+
+  /** Вкладка «Аудит ключей»: что лорбуки отправляли за весь чат. */
+  const renderAudit = () => {
+    const audit = auditChat(ctx()?.chat);
+    parts.sum.innerHTML = '';
+    if (!audit) {
+      parts.body.innerHTML = '<p class="pud-hint">Пока нечего разбирать: отчёты «что сработало» появляются у ответов, написанных при включённом расширении. Сделай несколько ответов, и здесь будет разбор.</p>';
+      return;
+    }
+    const keyRow = item => `<li class="pud-lt-row ${item.noisy ? 'off' : 'miss'}">
+        <b class="pud-lt-keyname">${escapeHtml(item.key)}</b>
+        <span class="pud-lt-how">в ${fmt(item.replies)} из ${fmt(audit.replies)} ответов · открыл записей: ${fmt(item.entries)}</span>
+        ${item.noisy ? '<span class="pud-lt-tag" title="Есть почти везде и пускает много записей: ничего не отфильтровывает">шум</span>' : ''}
+        ${item.noisy ? (state.stripped.has(item.key) ? '<span class="pud-lt-tag" title="Ключ убран из записей: новые ответы его уже не используют">убран</span>'
+          : `<button type="button" class="pud-padd pud-lt-strip" data-act="strip-key" data-key="${escapeHtml(item.key)}" title="Убрать этот вторичный ключ из записей, которые он пускал. Покажу список и спрошу">${icon('trash')}<span>Убрать из ${fmt(item.refs.length)}</span></button>`) : ''}
+        <span class="pud-tech" title="${escapeHtml(item.titles.join('\n'))}">${escapeHtml(item.titles.slice(0, 2).join(', '))}${item.entries > 2 ? '…' : ''}</span>
+      </li>`;
+    const entryRow = item => `<li class="pud-lt-row">
+        <button type="button" class="pud-lt-open" data-book="${escapeHtml(item.w)}" data-uid="${escapeHtml(item.u)}" title="Открыть запись в редакторе">${escapeHtml(item.t)}</button>
+        <span class="pud-lt-how">в ${fmt(item.replies)} из ${fmt(audit.replies)} · ~${fmt(item.perAppearance)} ток. за раз · всего ~${fmt(item.total)}</span>
+        <span class="pud-lt-tags">${item.constant ? '<span class="pud-lt-tag" title="Отправляется всегда, ключи не нужны">константа</span>'
+          : item.reasons.map(reason => `<span class="pud-lt-tag" title="Столько ответов она вошла из-за этих ключей: ${fmt(reason.count)}">${escapeHtml(reason.reason)}</span>`).join('')}</span>
+      </li>`;
+    const noisy = audit.noisy;
+    parts.body.innerHTML = `
+      <section class="pud-lt-sec">
+        <p>Разобрано ответов: <b>${fmt(audit.replies)}</b>. Лорбуки отправляют в среднем <b>~${fmt(audit.tokensPerReply)}</b> токенов за ответ: константы ~${fmt(audit.constantPerReply)}, записи по ключам ~${fmt(audit.keyPerReply)}.</p>
+        ${audit.enough ? '' : `<p class="pud-hint">Ответов пока мало (нужно хотя бы ${MIN_REPLIES}): цифры есть, а вердикты «шум» появятся позже.</p>`}
+        <p class="pud-hint">Считается по отчётам «что сработало» ответов этого чата. Лорбуки здесь только читаются, ничего не меняется.</p>
+      </section>
+      <section class="pud-lt-sec">
+        <h4>Шумные вторичные ключи · ${noisy.length}</h4>
+        <p class="pud-hint">Вторичный ключ должен сузить выбор. Если он есть почти в каждом ответе и пускает много записей, он ничего не фильтрует и все разделы персонажа идут разом.</p>
+        ${noisy.length ? `<ul class="pud-lt-list">${noisy.map(keyRow).join('')}</ul>
+          <p><button type="button" class="pud-padd" data-act="copy-words" title="Слова без окончаний, по одному в строке: для таблицы «Регексы» в Obsidian">${icon('copy')}<span>Скопировать слова (${noisy.length})</span></button></p>`
+          : `<p class="pud-hint">${audit.enough ? 'Шумных ключей не нашлось.' : 'Пока рано судить.'}</p>`}
+      </section>
+      <section class="pud-lt-sec">
+        <h4>Самые дорогие записи за чат</h4>
+        <ul class="pud-lt-list">${audit.entries.slice(0, 12).map(entryRow).join('')}</ul>
+      </section>
+      <details class="pud-lt-sec"><summary><h4>Все вторичные ключи · ${audit.secondary.length}</h4></summary><ul class="pud-lt-list">${audit.secondary.map(keyRow).join('') || '<li class="pud-hint">Вторичных ключей в сработавших записях нет.</li>'}</ul></details>
+      <details class="pud-lt-sec"><summary><h4>Основные ключи · ${audit.primary.length}</h4></summary><ul class="pud-lt-list">${audit.primary.map(keyRow).join('')}</ul></details>`;
+  };
+
   const renderWindow = () => {
     if (!win || !parts) return;
     try {
+      for (const tab of parts.tabs) {
+        const on = tab.dataset.tab === state.tab;
+        tab.classList.toggle('on', on);
+        tab.setAttribute('aria-selected', String(on));
+      }
+      parts.replyTools.hidden = state.tab === 'audit';
+      if (state.tab === 'audit') { renderAudit(); return; }
       parts.chips.checked = Boolean(prefs.chips);
       renderPick();
       const shown = current();
@@ -380,6 +512,7 @@ export function startLoreTrace(doc, { context, settings, save = () => {}, shared
   const openAt = target => {
     ensureWindow();
     state.view = target ?? (state.last ? 'last' : messagesWithRecords()[0] ?? 'last');
+    state.tab = 'reply';
     win.open();
     renderWindow();
   };

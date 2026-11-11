@@ -48,15 +48,35 @@ export function unmarkTimeskips(root) {
 function watchTimeskips(doc) {
   const chat = doc.getElementById('chat');
   if (!chat) return () => {};
+  // Только сообщения, в которых что-то поменялось: при стриминге чат меняется на каждом токене,
+  // и обход всех сообщений на каждый кадр давал подлагивания в длинных чатах.
+  const dirty = new Set();
+  const mark = text => { if (text.textContent.includes('[')) markTimeskips(text); };
   const scan = () => {
-    try { for (const text of chat.querySelectorAll('.mes_text')) markTimeskips(text); } catch (error) { report('таймскипы', error); }
+    try { for (const text of chat.querySelectorAll('.mes_text')) mark(text); } catch (error) { report('таймскипы', error); }
+  };
+  const flush = () => {
+    const texts = [...dirty];
+    dirty.clear();
+    try { for (const text of texts) if (text.isConnected) mark(text); } catch (error) { report('таймскипы', error); }
   };
   let queued = false;
   const view = doc.defaultView;
-  const schedule = () => {
-    if (queued) return;
+  const schedule = records => {
+    for (const record of records) {
+      const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+      const own = target?.closest('.mes_text');
+      if (own) { dirty.add(own); continue; }
+      // выше текста сообщения: добавили сами сообщения (новое, подгрузка истории, смена чата)
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches('.mes_text')) dirty.add(node);
+        for (const text of node.querySelectorAll('.mes_text')) dirty.add(text);
+      }
+    }
+    if (queued || !dirty.size) return;
     queued = true;
-    (view?.requestAnimationFrame ?? setTimeout)(() => { queued = false; scan(); });
+    (view?.requestAnimationFrame ?? setTimeout)(() => { queued = false; flush(); });
   };
   const observer = new view.MutationObserver(schedule);
   observer.observe(chat, { childList: true, subtree: true, characterData: true });

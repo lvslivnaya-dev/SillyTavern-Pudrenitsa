@@ -33,6 +33,9 @@ export function defaultSettings() {
     loreEditor: { book: '', sort: 'native' },
     // «Что сработало из лорбуков»: значки-ключики под ответами
     loreTrace: { chips: true },
+    // «Внешность по картинке»: чем описывать (профиль подключения или модель чата) и что запомнено у каждой персоны
+    personaLook: { mode: 'profile', profileId: '', maxTokens: 5000 },
+    personaLooks: {},
     // Позиции и размеры окон: имя окна → { left, top, width, height }
     windows: {},
   };

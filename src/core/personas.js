@@ -139,6 +139,7 @@ export function moveToFolder(settings, avatar, folderId, kind = 'personas') {
 /** Убирает следы удалённой персоны из настроек. */
 export function forgetPersona(settings, avatar) {
   delete settings.assignments.personas[avatar];
+  delete settings.personaLooks?.[avatar];
   settings.favorites.personas = settings.favorites.personas.filter(item => item !== avatar);
   settings.archive.personas = settings.archive.personas.filter(item => item !== avatar);
 }

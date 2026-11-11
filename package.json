@@ -1,6 +1,6 @@
 {
   "name": "sillytavern-pudrenitsa",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "description": "Pastel glass theme and windows for SillyTavern: settings hub, preset chips, personas, characters, extensions and lorebooks.",
@@ -11,7 +11,7 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "jsdom": "26.1.0"
   }

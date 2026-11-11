@@ -158,6 +158,19 @@ test('модуль: отчёт ложится в ответ и его свайп
   win.querySelector('[data-book="Ран"][data-uid="1"]').click();
   assert.deepEqual(opened, [['Ран', 1]]);
 
+  // вкладка «Аудит ключей»: за весь чат, лорбуки только читаются
+  win.querySelector('[data-tab="audit"]').click();
+  assert.match(win.textContent, /Разобрано ответов: 1/);
+  assert.match(win.textContent, /Ответов пока мало/, 'одного ответа мало для вердиктов');
+  assert.match(win.textContent, /Самые дорогие записи за чат/);
+  assert.equal(win.querySelector('.pud-lt-reply-tools').hidden, true, 'инструменты ответа спрятаны');
+  win.querySelector('[data-book="Ран"][data-uid="1"]').click();
+  assert.deepEqual(opened.at(-1), ['Ран', 1], 'запись из аудита открывается в редакторе');
+  win.querySelector('[data-tab="reply"]').click();
+  assert.equal(win.querySelector('.pud-lt-reply-tools').hidden, false);
+  assert.match(win.textContent, /ключ «Ран» и любой из «двор»/);
+  opened.length = 0;
+
   // пользователь написал новое — старый ожидающий отчёт не прилипнет к чужому сообщению
   playScan(args => fakeConsole.debug(...args), data => emit('WORLDINFO_SCAN_DONE', data), { trigger: 'quiet' });
   chat.push({ is_user: false, mes: 'приветствие', extra: {} });
@@ -173,4 +186,65 @@ test('модуль: отчёт ложится в ответ и его свайп
   assert.equal(document.getElementById(MENU_ID), null);
   assert.equal(document.querySelector('.pud-ltwin'), null);
   assert.deepEqual(Object.values(listeners).flat(), [], 'все слушатели сняты');
+});
+
+test('аудит: шумный ключ убирается из записей только после согласия, лорбук правится и сохраняется', async () => {
+  const { window } = new JSDOM(`<!doctype html><body><div id="options"><div class="options-content"><a id="pud-opt-chatlore"></a></div></div><div id="chat"></div></body>`, { pretendToBeVisual: true });
+  const { document } = window;
+  const rxk = (word, ending = '') => `/(?<![\p{L}\p{M}\p{N}_-])${word}${ending}(?![\p{L}\p{M}\p{N}_-])/iu`;
+  const voice = rxk('голос', '(?:а|ом)?');
+  const record = () => ({ on: [1, 2, 3].map(uid => ({ w: 'Книга', u: uid, t: `Запись ${uid}`, how: 'key', key: rxk(`имя${uid}`), key2: voice, tok: 100 })), off: [] });
+  const chat = [];
+  for (let i = 0; i < 5; i += 1) chat.push({ is_user: true, mes: 'привет' }, { is_user: false, mes: 'ответ', extra: { [EXTRA_KEY]: record() } });
+  const popups = [];
+  let answer = false;
+  const context = {
+    chat,
+    eventTypes: new Proxy({}, { get: (target, key) => String(key) }),
+    eventSource: { on() {}, removeListener() {} },
+    getCurrentChatId: () => 'chat',
+    POPUP_TYPE: { CONFIRM: 2 },
+    callGenericPopup: async content => { popups.push(content.textContent); return answer; },
+  };
+  globalThis.SillyTavern = { getContext: () => context };
+  const book = { entries: Object.fromEntries([1, 2, 3].map(uid => [uid, { uid, key: [rxk(`имя${uid}`)], keysecondary: uid === 3 ? [rxk('тембр')] : [voice, rxk('тембр')] }])) };
+  const saved = [];
+  const mirrored = [];
+  const api = {
+    ready: async () => {},
+    load: async () => structuredClone(book),
+    save: async (name, data) => { saved.push([name, data]); },
+    setOriginal: (data, uid, key, value) => mirrored.push([uid, key, value]),
+  };
+  const shared = {};
+  const undo = startLoreTrace(document, { context, settings: { windows: {} }, shared, consoleTarget: { debug() {}, log() {} }, api });
+  try {
+    shared.loreTrace.open();
+    const win = document.querySelector('.pud-ltwin');
+    win.querySelector('[data-tab="audit"]').click();
+    assert.match(win.textContent, /Шумные вторичные ключи · 1/);
+    const button = win.querySelector('[data-act="strip-key"]');
+    assert.ok(button, 'у шумного ключа есть кнопка');
+    assert.match(button.textContent, /Убрать из 3/);
+
+    // Отказ: лорбук не тронут.
+    button.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.match(popups[0], /Убрать ключ «голос…»/);
+    assert.match(popups[0], /Запись 1/);
+    assert.match(popups[0], /Из вторичных ключей 2 записей/, 'в третьей записи этого ключа уже нет: она в список не попала');
+    assert.deepEqual(saved, []);
+
+    // Согласие: ключ ушёл только из тех записей, где был, и сохранено через api; ключ «тембр» остался.
+    answer = true;
+    win.querySelector('[data-act="strip-key"]').click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0][0], 'Книга');
+    assert.deepEqual(saved[0][1].entries[1].keysecondary, [rxk('тембр')]);
+    assert.deepEqual(saved[0][1].entries[3].keysecondary, [rxk('тембр')]);
+    assert.deepEqual(mirrored.map(item => item.slice(0, 2)), [[1, 'keysecondary'], [2, 'keysecondary']]);
+    assert.equal(win.querySelector('[data-act="strip-key"]'), null, 'после правки кнопки нет');
+    assert.match(win.textContent, /убран/);
+  } finally { undo(); }
 });
